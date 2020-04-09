@@ -35,7 +35,6 @@ const createView = () => {
         if(event.keyCode == 13) {
             resetView(false);
             let numbers = event.target.value.match(/\d+/g).map(Number);
-            console.log(Math.max(...numbers));
             if(numbers.length > 30) {
                 console.log("HIBA: Maximum 30 oszlop engedélyezett.");
                 return;
