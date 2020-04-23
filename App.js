@@ -34,7 +34,7 @@ const createView = () => {
     document.getElementById('input1').addEventListener('keyup', (event) => {
         if(event.keyCode == 13) {
             resetView(false);
-            let numbers = event.target.value.match(/\d+/g).map(Number);
+            let numbers = event.target.value ? event.target.value.match(/\d+/g).map(Number) : [];
             if(numbers.length > 30) {
                 console.log("HIBA: Maximum 30 oszlop engedélyezett.");
                 return;
@@ -45,14 +45,18 @@ const createView = () => {
             let columns = [];
 
             let totalWaterVolume = 0;
-            
-            let indexedMaxHeights = getIndexedMaxHeights(numbers);
+			
+			console.time("mySolution_outer");
+			let indexedMaxHeights = getIndexedMaxHeights(numbers);
+			console.time("mySolution_inner2");
             numbers.forEach((element, index) => {
                 let localWaterLevel = Math.min(indexedMaxHeights.h1[index], indexedMaxHeights.h2[index]);
                 let localWaterHeight = localWaterLevel - element;
                 totalWaterVolume += localWaterHeight;
                 columns = [...columns, generateColumn(index, element, localWaterHeight),];
-            });
+			});
+			console.timeEnd("mySolution_inner2");
+			console.timeEnd("mySolution_outer");
             draw(columns);
             giveAnswer(totalWaterVolume);
         }     
@@ -60,6 +64,7 @@ const createView = () => {
 })();
 
 const getIndexedMaxHeights = (heightMap) => {
+	console.time("mySolution_inner1");
     let ret = {
         h1: [heightMap[0]],
         h2: []
@@ -71,7 +76,7 @@ const getIndexedMaxHeights = (heightMap) => {
         let correctedIndex = heightMap.length - (1 + i);
         ret.h2[correctedIndex] = Math.max(heightMap[correctedIndex], ret.h2[correctedIndex+1]);
     } 
-
+	console.timeEnd("mySolution_inner1");
     return ret;
 };
 
@@ -149,4 +154,58 @@ const resetView = (hardReset) => {
     document.getElementById("flex-container").innerHTML = "";
     document.getElementById("result").innerHTML = "";
     if(hardReset) document.getElementById("input1").value = "";
+}
+
+// Egyszerű (slice)
+const getAnswer_simple_slice = (heightMap) => {
+	console.time("simple_slice");
+	let totalWater = 0;
+	let n = heightMap.length;
+	let waterHeights = [];
+	for(let i = 0; i < n; i++)  {
+		// max(heightMap[1],...,heightMap[i])
+		leftMax = Math.max(...heightMap.slice(0, i+1));
+		// max(heightMap[i],...,heightMap[n])
+		rightMax = Math.max(...heightMap.slice(i, heightMap.length));
+		// aktuális víz magasság
+		waterHeight = Math.min(leftMax, rightMax) - heightMap[i];
+		waterHeights = [...waterHeights, waterHeight];
+		totalWater += waterHeight;
+	}
+	console.timeEnd("simple_slice");
+	return {
+		heights: waterHeights,
+		totalVolume: totalWater
+	};
+}
+
+// Egyszerű (reduce)
+const getAnswer_simple_reduce = (heightMap) => {
+	console.time("simple_reduce");
+	let totalWater = 0;
+	let n = heightMap.length;
+	let waterHeights = [];
+	for(let i = 0; i < n; i++)  {
+		// max(heightMap[1],...,heightMap[i])
+		leftMax = heightMap.reduce((accumulator, current, index, source) => {
+			if(index > i) return accumulator;
+			if(current > accumulator) return current;
+			else return accumulator;
+		});
+		// max(heightMap[i],...,heightMap[n])
+		rightMax = heightMap.reduce((accumulator, current, index, source) => {
+			if(index < i) return 0;
+			if(current > accumulator) return current;
+			else return accumulator;
+		});
+		// aktuális víz magasság
+		waterHeight = Math.min(leftMax, rightMax) - heightMap[i];
+		waterHeights = [...waterHeights, waterHeight];
+		totalWater += waterHeight;
+	}
+	console.timeEnd("simple_reduce");
+	return {
+		heights: waterHeights,
+		totalVolume: totalWater
+	};
 }
